@@ -1,6 +1,6 @@
 import pygame as pg
 
-from config import *
+from config import TILESIZE
 
 
 class Tile(pg.sprite.Sprite):
