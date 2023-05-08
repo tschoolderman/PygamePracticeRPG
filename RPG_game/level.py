@@ -2,8 +2,9 @@ from random import choice
 
 import pygame as pg
 
-from config import *
+from config import TILESIZE
 from debug import debug
+from enemy import Enemy
 from player import Player
 from support import import_csv_layout, import_folder
 from tile import Tile
@@ -24,6 +25,8 @@ class Level:
 
         # attack sprites
         self.current_attack = None
+        self.attack_sprites = pg.sprite.Group()
+        self.attackable_sprites = pg.sprite.Group()
 
         # sprite setup
         self.create_map()
@@ -36,6 +39,7 @@ class Level:
             "boundary": import_csv_layout("../maps/map_FloorBlocks.csv"),
             "grass": import_csv_layout("../maps/map_Grass.csv"),
             "object": import_csv_layout("../maps/map_Objects.csv"),
+            "entities": import_csv_layout("../maps/map_Entities.csv"),
         }
         graphics = {
             "grass": import_folder("../graphics/grass"),
@@ -50,14 +54,18 @@ class Level:
                         if style == "boundary":
                             Tile(
                                 (x, y),
-                                self.obstacle_sprites,
+                                [self.obstacle_sprites],
                                 "invisible",
                             )
                         if style == "grass":
                             random_grass_image = choice(graphics["grass"])
                             Tile(
                                 (x, y),
-                                [self.visible_sprites, self.obstacle_sprites],
+                                [
+                                    self.visible_sprites,
+                                    self.obstacle_sprites,
+                                    self.attackable_sprites,
+                                ],
                                 "grass",
                                 random_grass_image,
                             )
@@ -69,27 +77,74 @@ class Level:
                                 "object",
                                 surface,
                             )
-
-        self.player = Player(
-            (2000, 1430),
-            [self.visible_sprites],
-            self.obstacle_sprites,
-            self.create_attack,  # pass the function to the Player class and use it there
-            self.destroy_attack,
-        )
+                        if style == "entities":
+                            if col == "394":
+                                self.player = Player(
+                                    (x, y),
+                                    [self.visible_sprites],
+                                    self.obstacle_sprites,
+                                    self.create_attack,  # pass the function to the Player class and use it there
+                                    self.destroy_attack,
+                                    self.create_magic,
+                                )
+                            else:
+                                if col == "390":
+                                    monster_name = "bamboo"
+                                elif col == "391":
+                                    monster_name = "spirit"
+                                elif col == "392":
+                                    monster_name = "raccoon"
+                                else:
+                                    monster_name = "squid"
+                                Enemy(
+                                    monster_name,
+                                    (x, y),
+                                    [self.visible_sprites, self.attackable_sprites],
+                                    self.obstacle_sprites,
+                                    self.damage_player,
+                                )
 
     def create_attack(self):
-        self.current_attack = Weapon(self.player, [self.visible_sprites])
+        self.current_attack = Weapon(
+            self.player, [self.visible_sprites, self.attack_sprites]
+        )
+
+    def create_magic(self, style, strength, cost):
+        print(style, strength, cost)
 
     def destroy_attack(self):
         if self.current_attack:
             self.current_attack.kill()
         self.current_attack = None
 
+    def player_attack_logic(self):
+        if self.attack_sprites:
+            for attack_sprite in self.attack_sprites:
+                collision_sprites = pg.sprite.spritecollide(
+                    attack_sprite, self.attackable_sprites, False
+                )
+                if collision_sprites:
+                    for target_sprite in collision_sprites:
+                        if target_sprite.sprite_type == "grass":
+                            target_sprite.kill()
+                        elif target_sprite.sprite_type == "enemy":
+                            target_sprite.get_damage(
+                                self.player, attack_sprite.sprite_type
+                            )
+
+    def damage_player(self, amount, attack_type):
+        if self.player.vulnerable:
+            self.player.health -= amount
+            self.player.vulnerable = False
+            self.player.hurt_time = pg.time.get_ticks()
+            # spawn particles
+
     def run(self):
         # update and draw the game
         self.visible_sprites.custom_draw(self.player)
         self.visible_sprites.update()
+        self.visible_sprites.enemy_update(self.player)
+        self.player_attack_logic()
         self.ui.display(self.player)
 
 
@@ -120,3 +175,12 @@ class YSortCameraGroup(pg.sprite.Group):
         for sprite in sorted(self.sprites(), key=lambda sprite: sprite.rect.centery):
             offset_pos = sprite.rect.topleft - self.offset
             self.display_surface.blit(sprite.image, offset_pos)
+
+    def enemy_update(self, player):
+        enemy_sprites = [
+            sprite
+            for sprite in self.sprites()
+            if hasattr(sprite, "sprite_type") and sprite.sprite_type == "enemy"
+        ]
+        for enemy in enemy_sprites:
+            enemy.enemy_update(player)
