@@ -6,6 +6,7 @@ class Weapon(pg.sprite.Sprite):
 
     def __init__(self, player, groups) -> None:
         super().__init__(groups)
+        self.sprite_type = "weapon"
         # use the status in the Player class and split to only get up, down, left or right
         direction = player.status.split("_")[0]
 
