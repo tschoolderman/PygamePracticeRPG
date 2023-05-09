@@ -1,6 +1,6 @@
 import pygame as pg
 
-from config import TILESIZE
+from config import HITBOX_OFFSET, TILESIZE
 
 
 class Tile(pg.sprite.Sprite):
@@ -10,6 +10,7 @@ class Tile(pg.sprite.Sprite):
         super().__init__(groups)
         # Load a sprite image from file
         self.sprite_type = sprite_type
+        y_offset = HITBOX_OFFSET[sprite_type]
         self.image = surface
         if sprite_type == "object":
             # do an offset
@@ -19,4 +20,4 @@ class Tile(pg.sprite.Sprite):
 
         # Create a smaller hitbox than the image
         # Same width as image, but shorter top and bottom
-        self.hitbox = self.rect.inflate(0, -10)
+        self.hitbox = self.rect.inflate(0, y_offset)
