@@ -3,6 +3,12 @@ WIDTH = 1920
 HEIGHT = 1200
 FPS = 60
 TILESIZE = 64
+HITBOX_OFFSET = {
+    "player": -26,
+    "object": -40,
+    "grass": -10,
+    "invisible": 0,
+}
 
 # UI
 BAR_HEIGHT = 25
@@ -22,6 +28,12 @@ TEXT_COLOR = "#EEEEEE"
 HEALTH_COLOR = "red"
 ENERGY_COLOR = "blue"
 UI_BORDER_COLOR_ACTIVE = "gold"
+
+# game menu
+TEXT_COLOR_SELECTED = "#111111"
+BAR_COLOR = "#EEEEEE"
+BAR_COLOR_SELECTED = "#111111"
+MENU_BG_COLOR_SELECTED = "#EEEEEE"
 
 # weapons
 weapon_data = {

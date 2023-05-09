@@ -1,6 +1,6 @@
 import pygame as pg
 
-from config import *
+from config import monster_data
 from entity import Entity
 from support import import_folder
 
@@ -9,7 +9,14 @@ class Enemy(Entity):
     """A subclass of entity."""
 
     def __init__(
-        self, monster_name, pos, groups, obstacle_sprites, damage_player
+        self,
+        monster_name,
+        pos,
+        groups,
+        obstacle_sprites,
+        damage_player,
+        trigger_death_particles,
+        add_exp,
     ) -> None:
         # General setup
         super().__init__(groups)
@@ -42,11 +49,21 @@ class Enemy(Entity):
         self.attack_time = None
         self.attack_cooldown = 400
         self.damage_player = damage_player
+        self.trigger_death_particles = trigger_death_particles
+        self.add_exp = add_exp
 
         # invincibility timer
         self.vulnerable = True
         self.hit_time = None
         self.invincibility_duration = 300
+
+        # sound
+        self.death_sound = pg.mixer.Sound("../audio/death.wav")
+        self.hit_sound = pg.mixer.Sound("../audio/hit.wav")
+        self.attack_sound = pg.mixer.Sound(monster_info["attack_sound"])
+        self.death_sound.set_volume(0.2)
+        self.hit_sound.set_volume(0.2)
+        self.attack_sound.set_volume(0.2)
 
     def import_graphics(self, name):
         self.animations = {"idle": [], "move": [], "attack": []}
@@ -86,6 +103,7 @@ class Enemy(Entity):
         if self.status == "attack":
             self.attack_time = pg.time.get_ticks()
             self.damage_player(self.attack_damage, self.attack_type)
+            self.attack_sound.play()
         elif self.status == "move":
             self.direction = self.get_player_distance_direction(player)[1]
         else:
@@ -120,17 +138,23 @@ class Enemy(Entity):
 
     def get_damage(self, player, attack_type):
         if self.vulnerable:
+            self.hit_sound.play()
             self.direction = self.get_player_distance_direction(player)[1]
+            # weapon damage
             if attack_type == "weapon":
                 self.health -= player.get_full_weapon_damage()
+            # magic damage
             else:
-                ...
+                self.health -= player.get_full_magic_damage()
             self.hit_time = pg.time.get_ticks()
             self.vulnerable = False
 
     def check_death(self):
         if self.health <= 0:
             self.kill()
+            self.trigger_death_particles(self.rect.center, self.monster_name)
+            self.add_exp(self.exp)
+            self.death_sound.play()
 
     def hit_reaction(self):
         if not self.vulnerable:
